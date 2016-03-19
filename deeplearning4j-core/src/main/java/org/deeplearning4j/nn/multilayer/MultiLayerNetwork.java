@@ -704,7 +704,7 @@ public class MultiLayerNetwork implements Serializable, Classifier, Layer {
         if (input == null)
             throw new IllegalStateException("Unable to perform feed forward; no input found");
         else if (this.getLayerWiseConfigurations().getInputPreProcess(0) != null)
-            setInput(getLayerWiseConfigurations().getInputPreProcess(0).preProcess(input,getInputMiniBatchSize()));
+            setInput(getLayerWiseConfigurations().getInputPreProcess(0).preProcess(input,input.size(0)));
         else
             setInput(input);
         return feedForward();
@@ -1629,10 +1629,16 @@ public class MultiLayerNetwork implements Serializable, Classifier, Layer {
         boolean hasMaskArray = data.hasMaskArrays();
         if(hasMaskArray) setLayerMaskArrays(data.getFeaturesMaskArray(),data.getLabelsMaskArray());
         // activation for output layer is calculated in computeScore
-        feedForwardToLayer(layers.length - 2, data.getFeatureMatrix(),training);
+        List<INDArray> activations = feedForwardToLayer(layers.length - 2, data.getFeatureMatrix(),training);
+        int n = activations.size();
         setLabels(data.getLabels());
         if( getOutputLayer() instanceof BaseOutputLayer ){
             BaseOutputLayer<?> ol = (BaseOutputLayer<?>)getOutputLayer();
+            INDArray olInput = activations.get(n-1);
+            if(getLayerWiseConfigurations().getInputPreProcess(n-1) != null){
+                olInput = getLayerWiseConfigurations().getInputPreProcess(n-1).preProcess(olInput,input.size(0));
+            }
+            ol.setInput(olInput);     //Feedforward doesn't include output layer for efficiency
             ol.setLabels(data.getLabels());
             ol.computeScore(calcL1(),calcL2(), training);
             this.score = ol.score();
@@ -2258,7 +2264,8 @@ public class MultiLayerNetwork implements Serializable, Classifier, Layer {
                 }
             } else {
                 out = this.output(features,false);
-                e.eval(labels,out);
+                if(labels.rank() == 3 ) e.evalTimeSeries(labels,out);
+                else e.eval(labels,out);
             }
         }
 

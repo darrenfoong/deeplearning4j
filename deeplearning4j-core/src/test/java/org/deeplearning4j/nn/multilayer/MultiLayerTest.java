@@ -632,6 +632,63 @@ public class MultiLayerTest {
     }
 
     @Test
+    public void testDataSetScore(){
+
+        Nd4j.getRandom().setSeed(12345);
+        MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
+                .regularization(false)
+                .learningRate(1.0)
+                .weightInit(WeightInit.XAVIER)
+                .seed(12345L)
+                .list()
+                .layer(0, new DenseLayer.Builder().nIn(4).nOut(3).activation("sigmoid").build())
+                .layer(1, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT).activation("softmax").nIn(3).nOut(3).build())
+                .pretrain(false).backprop(true)
+                .build();
+
+        MultiLayerNetwork net = new MultiLayerNetwork(conf);
+        net.init();
+
+        INDArray in = Nd4j.create(new double[]{1.0,2.0,3.0,4.0});
+        INDArray out = Nd4j.create(new double[]{1,0,0});
+
+        double score = net.score(new DataSet(in,out));
+    }
+
+    @Test
+    public void testDataSetScoreCNN(){
+
+        MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
+                .regularization(false)
+                .learningRate(1.0)
+                .seed(12345L)
+                .list()
+                .layer(0, new ConvolutionLayer.Builder(2,2).nOut(3).build())
+                .layer(1, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT).activation("softmax").nOut(2).build())
+                .cnnInputSize(3,3,2)
+                .pretrain(false).backprop(true).build();
+
+        MultiLayerNetwork net = new MultiLayerNetwork(conf);
+        net.init();
+
+        int miniBatch = 3;
+        int depth = 2;
+        int width = 3;
+        int height = 3;
+        int nOut = 2;
+
+        Nd4j.getRandom().setSeed(12345);
+        Random r = new Random(12345);
+        INDArray input = Nd4j.rand(miniBatch,depth*width*height);
+        INDArray labels = Nd4j.create(miniBatch,nOut);
+        for( int i=0; i<miniBatch; i++ ){
+            labels.putScalar(new int[]{i,r.nextInt(nOut)},1.0);
+        }
+
+        double score = net.score(new DataSet(input,labels));
+    }
+
+    @Test
     @Ignore
     public void testCid() throws Exception {
         System.out.println(EnvironmentUtils.buildCId());
