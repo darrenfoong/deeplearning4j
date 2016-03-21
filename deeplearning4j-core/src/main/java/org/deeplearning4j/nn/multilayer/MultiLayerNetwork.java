@@ -81,6 +81,7 @@ public class MultiLayerNetwork implements Serializable, Classifier, Layer {
     protected NeuralNetConfiguration defaultConfiguration;
     protected MultiLayerConfiguration layerWiseConfigurations;
     protected Gradient gradient;
+    protected INDArray epsilon;
     protected double score;
     private INDArray params;
     /*
@@ -720,6 +721,10 @@ public class MultiLayerNetwork implements Serializable, Classifier, Layer {
         return gradient;
     }
 
+    public INDArray epsilon() {
+        return epsilon;
+    }
+
     @Override
     public Pair<Gradient, Double> gradientAndScore() {
         return new Pair<>(gradient(), score());
@@ -1177,6 +1182,7 @@ public class MultiLayerNetwork implements Serializable, Classifier, Layer {
     protected void backprop() {
         Pair<Gradient,INDArray> pair = calcBackpropGradients(null, true);
         this.gradient = (pair == null ? null : pair.getFirst());
+        this.epsilon = (pair == null ? null : pair.getSecond());
     }
 
     /** Calculate gradients and errors. Used in two places:
